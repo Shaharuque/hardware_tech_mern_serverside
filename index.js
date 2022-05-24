@@ -24,6 +24,7 @@ async function run() {
   try {
     await client.connect();
     const productCollection = client.db("sea_tech").collection("products");
+    const userCollection = client.db("sea_tech").collection("users");
 
     app.get("/products", async (req, res) => {
       const result = await productCollection.find().toArray();
@@ -36,6 +37,23 @@ async function run() {
       console.log(query);
       const result = await productCollection.findOne(query);
       res.send(result);
+    });
+
+    //signUp or Login
+    app.put("/user/:email", async (req, res) => {
+      const email = req.params.email;
+      const filter = { email: email };
+      const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN, {
+        expiresIn: "1d",
+      });
+      const user = req.body;
+      const option = { upsert: true };
+      let result;
+
+      const updateDoc = { $set: user };
+      result = await userCollection.updateOne(filter, updateDoc, option);
+
+      res.send({ result, token });
     });
   } finally {
   }
