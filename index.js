@@ -53,10 +53,35 @@ async function run() {
     await client.connect();
     const productCollection = client.db("sea_tech").collection("products");
     const userCollection = client.db("sea_tech").collection("users");
+    const reviewCollection = client.db("sea_tech").collection("reviews");
+
+    app.get("/homeReview", async (req, res) => {
+      const query = {};
+      const count = await reviewCollection.estimatedDocumentCount();
+      console.log(count);
+      const top6 = count - 6;
+      const result = await reviewCollection.find(query).skip(top6).toArray();
+      const resReverse = result.reverse();
+
+      // console.log(result);
+      res.send(result);
+    });
+    app.get("/review", async (req, res) => {
+      const query = {};
+
+      const result = await reviewCollection.find(query).toArray();
+      res.send(result);
+    });
 
     app.get("/products", async (req, res) => {
       const result = await productCollection.find().toArray();
       res.send(result);
+    });
+    app.get("/admin/:email", async (req, res) => {
+      const email = req.params.email;
+      const user = await userCollection.findOne({ email: email });
+      const isAdmin = user.role === "admin";
+      res.send({ admin: isAdmin });
     });
     app.get("/product", async (req, res) => {
       const id = req.query;
