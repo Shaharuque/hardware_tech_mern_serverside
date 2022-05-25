@@ -26,27 +26,15 @@ function verifyJWT(req, res, next) {
   }
   const token = authHeader.split(" ")[1];
 
-  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function (err, decoded) {
+  jwt.verify(token, process.env.ACCESS_TOKEN, function (err, decoded) {
     if (err) {
       return res.status(403).send({ message: "Forbidden Token" });
     }
     req.decoded = decoded;
+
     next();
   });
 }
-const verifyAdmin = async (req, res, next) => {
-  const requester = req.decoded.email;
-
-  const requesterAccount = await userCollection.findOne({
-    email: requester,
-  });
-
-  if (requesterAccount.role === "admin") {
-    next();
-  } else {
-    res.status(403).send({ message: "Forbidden" });
-  }
-};
 
 async function run() {
   try {
@@ -54,6 +42,19 @@ async function run() {
     const productCollection = client.db("sea_tech").collection("products");
     const userCollection = client.db("sea_tech").collection("users");
     const reviewCollection = client.db("sea_tech").collection("reviews");
+    const verifyAdmin = async (req, res, next) => {
+      const requester = req.decoded.email;
+
+      const requesterAccount = await userCollection.findOne({
+        email: requester,
+      });
+
+      if (requesterAccount.role === "admin") {
+        next();
+      } else {
+        res.status(403).send({ message: "Forbidden" });
+      }
+    };
 
     app.get("/homeReview", async (req, res) => {
       const query = {};
@@ -70,6 +71,24 @@ async function run() {
       const query = {};
 
       const result = await reviewCollection.find(query).toArray();
+      res.send(result);
+    });
+    app.get("/user", verifyJWT, async (req, res) => {
+      const query = { email: req.query.email };
+      const result = await userCollection.findOne(query);
+
+      res.send(result);
+    });
+    app.put("/user", verifyJWT, async (req, res) => {
+      const filter = { email: req.query.email };
+
+      const auth = req.body;
+
+      const updateDoc = {
+        $set: auth,
+      };
+      const result = await userCollection.updateOne(filter, updateDoc);
+
       res.send(result);
     });
 
@@ -107,6 +126,14 @@ async function run() {
       result = await userCollection.updateOne(filter, updateDoc, option);
 
       res.send({ result, token });
+    });
+
+    //add product
+
+    app.post("/addProduct", verifyJWT, verifyAdmin, async (req, res) => {
+      const doctor = req.body;
+      const result = await productCollection.insertOne(doctor);
+      res.send(result);
     });
   } finally {
   }
