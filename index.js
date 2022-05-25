@@ -73,6 +73,14 @@ async function run() {
       const result = await reviewCollection.find(query).toArray();
       res.send(result);
     });
+    app.post("/review", verifyJWT, async (req, res) => {
+      const body = req.body;
+      console.log(body);
+      req.body.rating = parseFloat(body.rating);
+
+      const result = await reviewCollection.insertOne(body);
+      res.send(result);
+    });
     app.get("/user", verifyJWT, async (req, res) => {
       const query = { email: req.query.email };
       const result = await userCollection.findOne(query);
