@@ -90,6 +90,7 @@ async function run() {
     app.get("/allUser", verifyJWT, verifyAdmin, async (req, res) => {
       const query = {};
       const result = await userCollection?.find(query)?.toArray();
+      console.log(result);
 
       res.send(result);
     });
