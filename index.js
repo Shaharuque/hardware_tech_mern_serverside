@@ -43,13 +43,13 @@ async function run() {
     const userCollection = client.db("sea_tech").collection("users");
     const reviewCollection = client.db("sea_tech").collection("reviews");
     const verifyAdmin = async (req, res, next) => {
-      const requester = req.decoded.email;
+      const requester = req?.decoded?.email;
 
-      const requesterAccount = await userCollection.findOne({
+      const requesterAccount = await userCollection?.findOne({
         email: requester,
       });
 
-      if (requesterAccount.role === "admin") {
+      if (requesterAccount?.role === "admin") {
         next();
       } else {
         res.status(403).send({ message: "Forbidden" });
@@ -82,8 +82,14 @@ async function run() {
       res.send(result);
     });
     app.get("/user", verifyJWT, async (req, res) => {
-      const query = { email: req.query.email };
+      const query = { email: req?.query?.email };
       const result = await userCollection.findOne(query);
+
+      res.send(result);
+    });
+    app.get("/allUser", verifyJWT, verifyAdmin, async (req, res) => {
+      const query = {};
+      const result = await userCollection?.find(query)?.toArray();
 
       res.send(result);
     });
@@ -91,11 +97,12 @@ async function run() {
       const filter = { email: req.query.email };
 
       const auth = req.body;
+      const options = { upsert: true };
 
       const updateDoc = {
         $set: auth,
       };
-      const result = await userCollection.updateOne(filter, updateDoc);
+      const result = await userCollection.updateOne(filter, updateDoc, options);
 
       res.send(result);
     });
@@ -105,9 +112,9 @@ async function run() {
       res.send(result);
     });
     app.get("/admin/:email", async (req, res) => {
-      const email = req.params.email;
-      const user = await userCollection.findOne({ email: email });
-      const isAdmin = user.role === "admin";
+      const email = req?.params?.email;
+      const user = await userCollection?.findOne({ email: email });
+      const isAdmin = user?.role === "admin";
       res.send({ admin: isAdmin });
     });
     app.get("/product", async (req, res) => {
@@ -121,7 +128,7 @@ async function run() {
 
     //signUp or Login
     app.put("/user/:email", async (req, res) => {
-      const email = req.params.email;
+      const email = req?.params?.email;
       const filter = { email: email };
       const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN, {
         expiresIn: "1d",
@@ -139,7 +146,7 @@ async function run() {
     //add product
 
     app.post("/addProduct", verifyJWT, verifyAdmin, async (req, res) => {
-      const doctor = req.body;
+      const doctor = req?.body;
       const result = await productCollection.insertOne(doctor);
       res.send(result);
     });
