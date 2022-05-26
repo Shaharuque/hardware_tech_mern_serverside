@@ -4,6 +4,7 @@ require("dotenv").config();
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const stripe = require("stripe")(process.env.STRIPE_SECRET);
 const res = require("express/lib/response");
 
 app.use(cors());
@@ -39,9 +40,13 @@ function verifyJWT(req, res, next) {
 async function run() {
   try {
     await client.connect();
+
+    //database
     const productCollection = client.db("sea_tech").collection("products");
     const userCollection = client.db("sea_tech").collection("users");
     const reviewCollection = client.db("sea_tech").collection("reviews");
+
+    ////////
     const verifyAdmin = async (req, res, next) => {
       const requester = req?.decoded?.email;
 
@@ -55,6 +60,34 @@ async function run() {
         res.status(403).send({ message: "Forbidden" });
       }
     };
+    app.put("/users/admin/:email", verifyJWT, verifyAdmin, async (req, res) => {
+      const email = req.params.email;
+      const filter = { email: email };
+      const updateDoc = {
+        $set: { role: "admin" },
+      };
+      const result = await userCollection.updateOne(filter, updateDoc);
+
+      res.send(result);
+    });
+    app.delete(
+      "/users/admin/:email",
+      verifyJWT,
+      verifyAdmin,
+      async (req, res) => {
+        const email = req.params.email;
+        const filter = { email: email };
+
+        const result = await userCollection.findOne(filter);
+
+        if (result.role === "admin") {
+          res.send({ success: false });
+        } else {
+          const userDelete = await userCollection.deleteOne(filter);
+          res.send({ success: true });
+        }
+      }
+    );
 
     app.get("/homeReview", async (req, res) => {
       const query = {};
@@ -150,6 +183,22 @@ async function run() {
       const doctor = req?.body;
       const result = await productCollection.insertOne(doctor);
       res.send(result);
+    });
+
+    //payment
+    app.post("/create-payment-intent", verifyJWT, async (req, res) => {
+      const service = req.body;
+      console.log(service);
+      const price = Number(service.paymentAmount);
+      console.log(price);
+      const amount = price * 1;
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+      res.send({ clientSecret: paymentIntent.client_secret });
     });
   } finally {
   }
