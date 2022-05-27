@@ -152,7 +152,7 @@ async function run() {
       const isAdmin = user?.role === "admin";
       res.send({ admin: isAdmin });
     });
-    app.get("/product", async (req, res) => {
+    app.get("/product", verifyJWT, async (req, res) => {
       const id = req.query;
       console.log(id);
       const query = { _id: ObjectId(id) };
