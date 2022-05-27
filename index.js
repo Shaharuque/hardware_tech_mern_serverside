@@ -45,6 +45,7 @@ async function run() {
     const productCollection = client.db("sea_tech").collection("products");
     const userCollection = client.db("sea_tech").collection("users");
     const reviewCollection = client.db("sea_tech").collection("reviews");
+    const orderCollection = client.db("sea_tech").collection("orders");
 
     ////////
     const verifyAdmin = async (req, res, next) => {
@@ -180,9 +181,17 @@ async function run() {
     //add product
 
     app.post("/addProduct", verifyJWT, verifyAdmin, async (req, res) => {
-      const doctor = req?.body;
-      const result = await productCollection.insertOne(doctor);
+      const product = req?.body;
+      const result = await productCollection.insertOne(product);
       res.send(result);
+    });
+    app.post("/order", verifyJWT, async (req, res) => {
+      const order = req?.body;
+      console.log(order);
+
+      const result = await orderCollection.insertOne(order);
+      console.log(result);
+      res.send({ success: true });
     });
 
     //payment
