@@ -146,6 +146,10 @@ async function run() {
       const result = await productCollection.find().toArray();
       res.send(result);
     });
+    app.get("/adminProducts", verifyJWT, verifyAdmin, async (req, res) => {
+      const result = await productCollection.find().toArray();
+      res.send(result);
+    });
     app.get("/admin/:email", async (req, res) => {
       const email = req?.params?.email;
       const user = await userCollection?.findOne({ email: email });
@@ -158,6 +162,16 @@ async function run() {
       const query = { _id: ObjectId(id) };
 
       const result = await productCollection.findOne(query);
+      res.send(result);
+    });
+    app.delete("/product", verifyJWT, verifyAdmin, async (req, res) => {
+      const id = req.query._id;
+      console.log(id);
+
+      const query = { _id: ObjectId(id) };
+
+      const result = await productCollection.deleteOne(query);
+      console.log(result);
       res.send(result);
     });
 
@@ -189,6 +203,22 @@ async function run() {
       const order = req?.body;
 
       const result = await orderCollection.insertOne(order);
+
+      res.send({ success: true });
+    });
+    app.put("/orderUpdate", verifyJWT, async (req, res) => {
+      const order = req?.body;
+
+      console.log(order);
+
+      const filter = { _id: ObjectId(order._id) };
+      console.log(filter);
+
+      const updateDoc = {
+        $set: { transactionId: order.transactionId, status: "pending" },
+      };
+
+      const result = await orderCollection.updateOne(filter, updateDoc);
 
       res.send({ success: true });
     });
