@@ -6,6 +6,7 @@ const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const stripe = require("stripe")(process.env.STRIPE_SECRET);
 const res = require("express/lib/response");
+const query = require("express/lib/middleware/query");
 
 app.use(cors());
 app.use(express.json());
@@ -93,7 +94,7 @@ async function run() {
     app.get("/homeReview", async (req, res) => {
       const query = {};
       const count = await reviewCollection.estimatedDocumentCount();
-      console.log(count);
+
       const top6 = count - 6;
       const result = await reviewCollection.find(query).skip(top6).toArray();
       const resReverse = result.reverse();
@@ -109,7 +110,7 @@ async function run() {
     });
     app.post("/review", verifyJWT, async (req, res) => {
       const body = req.body;
-      console.log(body);
+
       req.body.rating = parseFloat(body.rating);
 
       const result = await reviewCollection.insertOne(body);
@@ -124,7 +125,6 @@ async function run() {
     app.get("/allUser", verifyJWT, verifyAdmin, async (req, res) => {
       const query = {};
       const result = await userCollection?.find(query)?.toArray();
-      console.log(result);
 
       res.send(result);
     });
@@ -154,9 +154,9 @@ async function run() {
     });
     app.get("/product", verifyJWT, async (req, res) => {
       const id = req.query;
-      console.log(id);
+
       const query = { _id: ObjectId(id) };
-      console.log(query);
+
       const result = await productCollection.findOne(query);
       res.send(result);
     });
@@ -187,19 +187,76 @@ async function run() {
     });
     app.post("/order", verifyJWT, async (req, res) => {
       const order = req?.body;
-      console.log(order);
 
       const result = await orderCollection.insertOne(order);
-      console.log(result);
+
       res.send({ success: true });
+    });
+    app.get("/myOrder", verifyJWT, async (req, res) => {
+      const email = req?.query;
+      console.log(email);
+      const query = email;
+
+      const result = await orderCollection.find(query).toArray();
+      console.log(result);
+
+      res.send(result);
+    });
+    app.get("/allOrder", verifyJWT, verifyAdmin, async (req, res) => {
+      const result = await orderCollection.find().toArray();
+
+      res.send(result);
+    });
+    app.get("/available", verifyJWT, verifyAdmin, async (req, res) => {
+      const { product_id } = req.query;
+      // console.log(product_id);
+      const query = { _id: ObjectId(product_id) };
+      console.log(query);
+      const result = await productCollection.find(query).toArray();
+
+      res.send(result);
+    });
+    app.put("/update", verifyJWT, verifyAdmin, async (req, res) => {
+      const { product_id, _id, orderAmount } = req.query;
+      console.log(product_id);
+      console.log(_id);
+      console.log(orderAmount);
+      const query1 = { _id: ObjectId(product_id) };
+      const query2 = { _id: ObjectId(_id) };
+
+      const available = await productCollection.findOne(query1);
+
+      const availableAmount = available.availableQuantity;
+      const newQuantity = Number(availableAmount) - Number(orderAmount);
+      console.log(newQuantity);
+
+      const updateDoc = {
+        $set: { availableQuantity: newQuantity },
+      };
+      const result = await productCollection.updateOne(query1, updateDoc);
+      const updateDoc2 = {
+        $set: { status: "delivered" },
+      };
+      const result2 = await orderCollection.updateOne(query2, updateDoc2);
+
+      let final = false;
+
+      if (result && result2) {
+        final = true;
+      }
+
+      // console.log(query);
+      // const result = await productCollection.find(query).toArray();
+
+      res.send({ success: final });
     });
 
     //payment
     app.post("/create-payment-intent", verifyJWT, async (req, res) => {
       const service = req.body;
-      console.log(service);
+
       const price = Number(service.paymentAmount);
-      console.log(price);
+
       const amount = price * 1;
 
       const paymentIntent = await stripe.paymentIntents.create({
